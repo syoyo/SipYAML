@@ -19,11 +19,14 @@
  *	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  *	IN THE SOFTWARE.
 **/
+
+// Removed C++-11 feature by Syoyo Fujita.
+
 #ifndef SIPYAML__H_eTNcyHjx
 #define SIPYAML__H_eTNcyHjx
 #include <memory>
 #include <cassert>
-#include <cstdint>
+#include <stdint.h>
 #include <cstring>
 #include <string>
 
@@ -93,14 +96,14 @@ namespace Sip
 		 *	Stores possible BOM types for YAML, which only supports UTF-8 and
 		 *	UTF-16.
 		**/
-		enum BOM : char
+		typedef enum
 		{
 			UTF8,
 			UTF16LE,
 			UTF16BE,
 			UTF32LE,
 			UTF32BE
-		};
+		} BOM;
 	
 		/*!
 o		 *	Returns the BOM type of the indicated string. The string must be at
@@ -202,7 +205,7 @@ o		 *	Handles UTF-8 data comparison and escaping.
 	/*!
 	 *	The type of node. Can be used as an alternative to reading the value.
 	**/
-	enum YAMLType : uint8_t
+	typedef enum
 	{
 		Begin		=	0,			/*!< Indicates The start of a document.
 										There is no value or key. */
@@ -220,7 +223,7 @@ o		 *	Handles UTF-8 data comparison and escaping.
 		IsReference	=	0x20,		//!< (Flag) This node is a reference.
 		Block		=	0x00,		//!< (Flag) Child nodes appear as blocked.
 		Flow		=	0x80		//!< (Flag) Child nodes appear in-line.
-	};
+	} YAMLType;
 	
 	/*!
 	 *	A generic node class that stores other nodes as children and siblings in
@@ -237,7 +240,7 @@ o		 *	Handles UTF-8 data comparison and escaping.
 			assert(node && !node->_parent &&
 				!node->_nextSibling && !node->_previousSibling);
 			node->_parent = static_cast<NodeType*>(this);
-			node->_nextSibling = nullptr;
+			node->_nextSibling = NULL;
 			if (_firstChild)
 			{
 				_lastChild->_nextSibling = node;
@@ -292,9 +295,9 @@ o		 *	Handles UTF-8 data comparison and escaping.
 	
 	protected:
 	
-		NodeBase() : _parent(nullptr), _nextSibling(nullptr),
-			_previousSibling(nullptr), _firstChild(nullptr),
-			_lastChild(nullptr) {}
+		NodeBase() : _parent(NULL), _nextSibling(NULL),
+			_previousSibling(NULL), _firstChild(NULL),
+			_lastChild(NULL) {}
 		
 	private:
 		NodeType *_parent;
@@ -308,7 +311,7 @@ o		 *	Handles UTF-8 data comparison and escaping.
 	 *	A YAML node that has a type, a key and a value.
 	**/
 	template <typename Char> struct YAMLNode :
-		public NodeBase<YAMLNode<Char>>
+		public NodeBase<YAMLNode<Char> >
 	{
 		typedef typename Char::CharType CharType;
 		
@@ -317,7 +320,7 @@ o		 *	Handles UTF-8 data comparison and escaping.
 		**/
 		YAMLNode(YAMLType type = Begin, const CharType *key = 0,
 			size_t keySize = 0, const CharType *value = 0,
-			size_t valueSize = 0) : NodeBase<YAMLNode<Char>>(),
+			size_t valueSize = 0) : NodeBase<YAMLNode<Char> >(),
 			_key(key), _value(value), _keySize(keySize), _valueSize(valueSize),
 			_type(type) {}
 		
@@ -416,7 +419,7 @@ o		 *	Handles UTF-8 data comparison and escaping.
 	namespace Print
 	{
 		template <typename Char> void printYAMLChildren(
-			std::string *printer, NodeBase<YAMLNode<Char>> *node,
+			std::string *printer, NodeBase<YAMLNode<Char> > *node,
 			size_t indent = 0);
 		
 		/*!
@@ -466,7 +469,7 @@ o		 *	Handles UTF-8 data comparison and escaping.
 		template <typename Char> void printYAMLComment(
 			std::string *printer, YAMLNode<Char> *node, size_t indent = 0)
 		{
-			if (node->type() & YAMLType::Flow)
+			if (node->type() & Sip::Flow)
 			{
 				printer->append(" # ");
 			}
@@ -485,27 +488,27 @@ o		 *	Handles UTF-8 data comparison and escaping.
 		 *	Prints the children of a YAML node.
 		**/
 		template <typename Char> void printYAMLChildren(
-			std::string *printer, NodeBase<YAMLNode<Char>> *node,
-			size_t indent = 0)
+			std::string *printer, NodeBase<YAMLNode<Char> > *node,
+			size_t indent)
 		{
 			YAMLNode<Char> *child = node->firstChild();
 			while (child)
 			{
 				switch (child->type() & 0xF)
 				{
-				case YAMLType::Begin:
+				case Sip::Begin:
 					printer->append("---");
 					break;
-				case YAMLType::End:
+				case Sip::End:
 					printer->append("...");
 					break;
-				case YAMLType::Mapping:
+				case Sip::Mapping:
 					printYAMLMap(printer, child, indent);
 					break;
-				case YAMLType::Sequence:
+				case Sip::Sequence:
 					printYAMLList(printer, child, indent);
 					break;
-				case YAMLType::Directive:
+				case Sip::Directive:
 					printer->append(1, '%');
 					printer->append(child->key(), child->keySize());
 					if (child->value())
@@ -596,7 +599,7 @@ o		 *	Handles UTF-8 data comparison and escaping.
 	**/
 	template <typename Char> struct YAMLDocumentBase :
 		public MemoryPool<YAMLNode<Char>, SIPYAML_STATIC_POOL_SIZE,
-		SIPYAML_DYNAMIC_POOL_SIZE>, public NodeBase<YAMLNode<Char>>
+		SIPYAML_DYNAMIC_POOL_SIZE>, public NodeBase<YAMLNode<Char> >
 	{
 		typedef typename Char::CharType CharType;
 		typedef YAMLNode<Char> Node;
@@ -629,7 +632,7 @@ o		 *	Handles UTF-8 data comparison and escaping.
 			size_t position = 0;
 			size_t indent =  0;
 			YAMLNode<Char> *node;
-			NodeBase<YAMLNode<Char>> *inserting = this;
+			NodeBase<YAMLNode<Char> > *inserting = this;
 			
 			stack<size_t> indents;
 			indents.push(0);
@@ -640,7 +643,7 @@ o		 *	Handles UTF-8 data comparison and escaping.
 				{
 					break;
 				}
-				node = nullptr;
+				node = NULL;
 				indent = 0;
 				while (Char::isChar(yaml[position], ' '))
 				{
@@ -760,7 +763,7 @@ o		 *	Handles UTF-8 data comparison and escaping.
 					}
 					inserting->appendNode(node);
 				}
-				node = nullptr;
+				node = NULL;
 			}
 		}
 	private:
